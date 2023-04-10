@@ -1,10 +1,4 @@
-import xxhash from "xxhash-wasm";
-import murmurHash3 from "murmurhash3js";
-import xxhashjs from "xxhashjs";
 import {createXXHash64 , createAdler32 ,createXXHash3, createCRC32} from "hash-wasm";
-import murmur from "murmurhash-js";
-
-const { h64ToString } = await xxhash();
 
 const chunkSize = 64 * 1024 * 1024;
 const fileReader = new FileReader();
