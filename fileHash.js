@@ -1,38 +1,52 @@
-import {createXXHash64 , createAdler32 ,createXXHash3, createCRC32 , createBLAKE3} from "hash-wasm";
+import {createXXHash64 , createAdler32 ,createXXHash3, createCRC32 , createBLAKE3,createSHA1,createMD5} from "hash-wasm";
 
 const chunkSize = 64 * 1024 * 1024;
 const fileReader = new FileReader();
 
-export const fileHash = (fileElement,resultElement,sizeElem ) => {
+export const fileHash = (fileElement,resultElement,statusElem ) => {
 
     fileElement.addEventListener("change", async(event) => {
+
         resultElement.innerHTML = "";
-        sizeElem.innerHTML = "Loading... ";
-        const file = event.target.files[0];
+        statusElem.innerHTML = "Loading... ";
+        const files = event.target.files;
       
-        let hashTypes = [ 'xxhash64', 'xxhash3', 'adler32', 'crc32', 'blake3' ];
+        let hashTypes = [ 'xxhash64', 'xxhash3', 'adler32', 'crc32', 'blake3' ,'md5'];
 
         for(let hashType of hashTypes){
- 
-            const start = Date.now();
-            const hash = await readFile(file, hashType);
-            const end = Date.now();
-            const duration = end - start;
-            const fileSizeMB = file.size / 1024 / 1024;
-            const throughput = fileSizeMB / (duration / 1000);
-            sizeElem.innerHTML = `File size: ${fileSizeMB.toFixed(2)} MB`;
+            statusElem.innerHTML = 'Computing hash : ' + hashType + ' please wait...';
+            const filesData = []
+            for(let i=0; i< files.length; i++){
+                const file = files[i];
+                const {duration,fileSizeMB} = await calcHash(file , hashType);
+                filesData.push({duration,fileSizeMB})
+            }
+
+            const totalFileSizeMB = filesData.reduce((acc,curr)=>acc+curr.fileSizeMB,0)
+            const totalDuration = filesData.reduce((acc,curr)=>acc+curr.duration,0)
+
+            const avgThroughput = totalFileSizeMB / (totalDuration / 1000);
+
             resultElement.innerHTML = resultElement.innerHTML + `
-              <h3>${hashType}</h3>
-              Hash: ${hash}<br>
-              Duration: ${duration} ms<br>
-              Throughput: ${throughput.toFixed(2)} MB/s
-            `;
+            <h3>${hashType}</h3>
+            Duration: ${totalDuration} ms<br>
+            Throughput: ${avgThroughput.toFixed(2)} MB/s
+            <hr>`;
+            statusElem.innerHTML = `Number of files ${files.length} | Total Size : ${totalFileSizeMB.toFixed(2)} MB`;
+
         }
 
       });
 }
 
-
+async function calcHash(file , hashType){
+    const start = Date.now();
+    await readFile(file, hashType);
+    const end = Date.now();
+    const duration = end - start;
+    const fileSizeMB = file.size / 1024 / 1024;
+    return {duration,fileSizeMB}
+}
 
 function hashChunk(chunk, hasher) {
   return new Promise((resolve, reject) => {
@@ -59,11 +73,13 @@ const readFile = async(file,hashType) => {
     hasher = await createCRC32();
   if (hashType === "blake3")
     hasher = await createBLAKE3();
+  if (hashType === "md5")
+    hasher = await createMD5();
 
   hasher.init();
 
   const chunkNumber = Math.floor(file.size / chunkSize);
-  console.log("chunkNumber : ",chunkNumber)
+
   for (let i = 0; i <= chunkNumber; i++) {
     const chunk = file.slice(
       chunkSize * i,
@@ -73,5 +89,6 @@ const readFile = async(file,hashType) => {
   }
 
   const hash = hasher.digest();
+
   return Promise.resolve(hash);
 };
