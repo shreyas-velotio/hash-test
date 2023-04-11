@@ -12,11 +12,12 @@ document.querySelector('#app').innerHTML = `
       <input type="file" name="file" id="file" />
     </form>
     
+    <div id="size"></div> 
     <div id="result"></div>
 
   </div>
 `
 
 
-fileHash(document.querySelector('#file'), document.querySelector('#result'))
+fileHash(document.querySelector('#file'), document.querySelector('#result'), document.querySelector('#size'))
 
