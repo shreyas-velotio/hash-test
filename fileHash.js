@@ -18,19 +18,29 @@ export const fileHash = (fileElement,resultElement,statusElem ) => {
             const filesData = []
             for(let i=0; i< files.length; i++){
                 const file = files[i];
-                const {duration,fileSizeMB} = await calcHash(file , hashType);
-                filesData.push({duration,fileSizeMB})
+                const obj = await calcHash(file , hashType);
+                obj.fileName = file.name;
+                filesData.push(obj)
             }
 
             const totalFileSizeMB = filesData.reduce((acc,curr)=>acc+curr.fileSizeMB,0)
             const totalDuration = filesData.reduce((acc,curr)=>acc+curr.duration,0)
+
+            const duplicates = filesData.filter((item, index) => {
+                return filesData.findIndex((item2) => item2.hash === item.hash) !== index;
+            });
+
+            console.log('duplicates',duplicates.map(d=>d.fileName));
+
+            const numberOfDuplicateHashes = duplicates.length;
 
             const avgThroughput = totalFileSizeMB / (totalDuration / 1000);
 
             resultElement.innerHTML = resultElement.innerHTML + `
             <h3>${hashType}</h3>
             Duration: ${totalDuration} ms<br>
-            Throughput: ${avgThroughput.toFixed(2)} MB/s
+            Throughput: ${avgThroughput.toFixed(2)} MB/s<br>
+            Number of duplicate hashes: ${numberOfDuplicateHashes}<br>
             <hr>`;
             statusElem.innerHTML = `Number of files ${files.length} | Total Size : ${totalFileSizeMB.toFixed(2)} MB`;
 
@@ -41,11 +51,11 @@ export const fileHash = (fileElement,resultElement,statusElem ) => {
 
 async function calcHash(file , hashType){
     const start = Date.now();
-    await readFile(file, hashType);
+    const hash = await readFile(file, hashType);
     const end = Date.now();
     const duration = end - start;
     const fileSizeMB = file.size / 1024 / 1024;
-    return {duration,fileSizeMB}
+    return {duration,fileSizeMB,hash}
 }
 
 function hashChunk(chunk, hasher) {
